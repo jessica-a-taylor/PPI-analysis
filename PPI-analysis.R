@@ -27,6 +27,9 @@ for (gene in interaction_counts$Gene) {
                                                                           which(NLR_PPIs$GeneID2==gene)))
 }
 
+write_csv(interaction_counts[which(interaction_counts$Counts>5),],
+          file = "Data/NLR_PPI hotspots.csv")
+
 AT2G01023_network <- NLRs[c(which(NLRs$Gene %in% NLR_PPIs[c(which(NLR_PPIs$GeneID1=="AT2G01023"), 
                                                             which(NLR_PPIs$GeneID2=="AT2G01023")),"GeneID1"]),
                             which(NLRs$Gene %in% NLR_PPIs[c(which(NLR_PPIs$GeneID1=="AT2G01023"), 
@@ -52,23 +55,31 @@ heatmap(AT3G41762_network_flg, Colv = NA)
 #########################
 
 # Filter for PPIs involving late genes.
-late_up <- as.data.frame(read_csv("Data/Flg/Late_up_genes.csv"))
-lateUp_PPIs <- data.frame()
-
-for (row in 1:nrow(all_PPIs)) {
-  if (all_PPIs[row, "GeneID1"] %in% late_up$Gene | all_PPIs[row, "GeneID2"] %in% late_up$Gene) {
-    lateUp_PPIs <- rbind(lateUp_PPIs, all_PPIs[row,])
+for (time in c("Early", "Intermediate", "Late")) {
+  allGenes <- as.data.frame(read_csv(paste0("Data/Flg/", time, "_up_genes.csv")))
+  PPIs <- data.frame()
+  
+  for (row in 1:nrow(all_PPIs)) {
+    if (all_PPIs[row, "GeneID1"] %in% allGenes$Gene | all_PPIs[row, "GeneID2"] %in% allGenes$Gene) {
+      PPIs <- rbind(PPIs, all_PPIs[row,])
+    }
   }
-}
-
-# Identify interaction hotspots.
-interaction_counts <- data.frame(Gene = unique(c(lateUp_PPIs$GeneID1, lateUp_PPIs$GeneID2)),
-                                 Counts = rep(0, times = length(unique(c(lateUp_PPIs$GeneID1, lateUp_PPIs$GeneID2)))))
-
-for (gene in interaction_counts$Gene) {
-  interaction_counts[interaction_counts$Gene==gene, "Counts"] <- length(c(which(lateUp_PPIs$GeneID1==gene), 
-                                                                          which(lateUp_PPIs$GeneID2==gene)))
+  
+  # Identify interaction hotspots.
+  interaction_counts <- data.frame(Gene = unique(c(PPIs$GeneID1, PPIs$GeneID2)),
+                                   Counts = rep(0, times = length(unique(c(PPIs$GeneID1, PPIs$GeneID2)))))
+  
+  for (gene in interaction_counts$Gene) {
+    interaction_counts[interaction_counts$Gene==gene, "Counts"] <- length(c(which(PPIs$GeneID1==gene), 
+                                                                            which(PPIs$GeneID2==gene)))
+  }
+  write_csv(interaction_counts[which(interaction_counts$Counts>5),],
+            file = paste0("Data/", time, "_PPI hotspots.csv"))
 }
 
 # Produce a venn diagram showing the overlap in PPI networks between gene sets.
-
+allHotspots <- list()
+for (file in list.files(path = "Data/", pattern = "*hotspots.csv")) {
+  df <- read_csv(paste0("Data/", file))
+  allHotspots[[str_match(file, "^([A-Za-z]+).*$")[,2]]] <- df$Gene
+}

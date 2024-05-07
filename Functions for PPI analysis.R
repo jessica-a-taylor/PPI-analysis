@@ -4,4 +4,5 @@ loadLibraries <- function() {
   library(readr)
   library(ggplot2)
   library(ggvenn)
+  library(stringr)
 }
